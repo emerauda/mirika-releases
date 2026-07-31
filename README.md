@@ -4,7 +4,7 @@
 
 Mirika 本体のダウンロード(Windows / macOS / Linux)と、Chrome 拡張・OBS オーバーレイ・SDK を配っています。
 製品情報と使い方は [mirika.dev](https://mirika.dev/) をご覧ください。
-質問・不具合報告は [公式 Discord](https://discord.gg/fnmUau5qzB) へどうぞ。
+質問・不具合報告は [公式 Discord](https://discord.gg/fnmUau5qzB) へ、最新情報は [X @mirika_dev](https://x.com/mirika_dev) でどうぞ。
 
 ## ダウンロード
 
