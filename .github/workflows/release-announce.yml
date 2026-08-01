@@ -1,0 +1,64 @@
+# リリース公開を Discord に告知する(mirika-releases リポジトリに置く用)。
+#
+# 置き場所: emerauda/mirika-releases の .github/workflows/release-announce.yml
+# 必要な secret: DISCORD_WEBHOOK(Discord のチャンネル → 連携サービス → Webhook の URL)
+#
+# ミラーの release が published になるたびに、OS 別リンクを整形して1通だけ送る。
+# rc / beta(prerelease フラグ)は試験版の注意書き付き・青色で出す。
+name: Announce release on Discord
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  announce:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post to Discord
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          TAG: ${{ github.event.release.tag_name }}
+          URL: ${{ github.event.release.html_url }}
+          PRERELEASE: ${{ github.event.release.prerelease }}
+          ASSETS_JSON: ${{ toJSON(github.event.release.assets) }}
+        run: |
+          if [ -z "$WEBHOOK" ]; then
+            echo "DISCORD_WEBHOOK が未設定なので何もしません"; exit 0
+          fi
+          node - <<'EOF'
+          const assets = JSON.parse(process.env.ASSETS_JSON || "[]");
+          const pre = process.env.PRERELEASE === "true";
+          const os = [];
+          const extras = [];
+          for (const a of assets) {
+            const line = `[${a.name}](${a.browser_download_url})`;
+            if (a.name.endsWith(".exe")) os.push(`🪟 Windows — ${line}`);
+            else if (a.name.endsWith(".AppImage")) os.push(`🐧 Linux — ${line}`);
+            else if (a.name.endsWith(".dmg")) os.push(`🍎 macOS — ${line}`);
+            else extras.push(line);
+          }
+          const lines = [];
+          if (pre) lines.push("⚗️ プレリリース(rc / beta)です。お試しの方向け。");
+          lines.push(...os);
+          if (extras.length) lines.push("", "同梱ツール: " + extras.join(" ・ "));
+          lines.push("", "使い方: https://mirika.dev/docs");
+          const body = {
+            embeds: [{
+              title: `Mirika ${process.env.TAG} が出ました`,
+              url: process.env.URL,
+              color: pre ? 0x8be2f5 : 0xff6b8f,
+              description: lines.join("\n"),
+            }],
+          };
+          fetch(process.env.WEBHOOK, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(body),
+          }).then((r) => {
+            if (!r.ok) { console.error("Discord への送信に失敗:", r.status); process.exit(1); }
+          });
+          EOF
