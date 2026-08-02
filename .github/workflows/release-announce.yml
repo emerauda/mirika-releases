@@ -24,6 +24,7 @@ jobs:
           TAG: ${{ github.event.release.tag_name }}
           URL: ${{ github.event.release.html_url }}
           PRERELEASE: ${{ github.event.release.prerelease }}
+          RELEASE_BODY: ${{ github.event.release.body }}
           ASSETS_JSON: ${{ toJSON(github.event.release.assets) }}
         run: |
           if [ -z "$WEBHOOK" ]; then
@@ -43,9 +44,14 @@ jobs:
           }
           const lines = [];
           if (pre) lines.push("⚗️ プレリリース(rc / beta)です。お試しの方向け。");
+          // リリースノートを本文ごと載せる(空の告知が飛んだ実害への対策)。
+          // embed の description 上限 4096 に収まるよう頭から詰める
+          const notes = (process.env.RELEASE_BODY || "").trim();
+          if (notes) lines.push(notes.length > 1600 ? notes.slice(0, 1600) + "…" : notes, "");
           lines.push(...os);
+          if (os.length === 0) lines.push(`⬇️ ダウンロード: ${process.env.URL}`);
           if (extras.length) lines.push("", "同梱ツール: " + extras.join(" ・ "));
-          lines.push("", "使い方: https://mirika.dev/docs");
+          lines.push("", `📝 すべての変更点: ${process.env.URL}`, "📖 使い方: https://mirika.dev/docs");
           const body = {
             embeds: [{
               title: `Mirika ${process.env.TAG} が出ました`,
